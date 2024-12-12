@@ -1,185 +1,95 @@
-#!/usr/bin/env python
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
 
-import os
-import sys
-import time
-import signal
-import json
-import requests
-from requests.structures import CaseInsensitiveDict
-from edge_impulse_linux.image import ImageImpulseRunner
-from picamera2 import Picamera2
-import cv2
-import numpy as np
-import getopt
+const app = express();
+var port = process.env.PORT || 3000;
 
-runner = None
-id_product = 1
-list_label = []
-count = 0
-taken = 0
+let products = [];
+let orders = [];
+app.use(cors());
 
-# Product labels
-a = 'Comb'
-b = 'Bhakarwadi'
-l = 'Isolation Tape'
-c = 'Hair cream'
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
-def now():
-    return round(time.time() * 1000)
+app.get('/', (req, res) => {
+    res.send("API deployment successful");
+});
 
-def initialize_camera():
-    try:
-        picam2 = Picamera2()
-        preview_config = picam2.create_preview_configuration(main={"size": (640, 480)})
-        picam2.configure(preview_config)
-        picam2.start()
-        print("Camera initialized successfully.")
-        return picam2
-    except Exception as e:
-        print(f"Error initializing camera: {e}")
-        sys.exit(1)
+app.post('/product', (req, res) => {
+    const product = req.body;
 
-def capture_frame(picam2):
-    try:
-        frame = picam2.capture_array()
-        print("Frame captured successfully.")
-        return cv2.cvtColor(frame, cv2.COLOR_RGB2BGR)
-    except Exception as e:
-        print(f"Error capturing frame: {e}")
-        return None
+    // Log the received product for debugging
+    console.log('Received product:', product);
+    
+    // Add the product to the products array
+    products.push(product);
 
-def sigint_handler(sig, frame):
-    print('Interrupted')
-    if runner:
-        runner.stop()
-    sys.exit(0)
+    res.status(200).send('Product is added to the database');
+});
 
-signal.signal(signal.SIGINT, sigint_handler)
+app.get('/product', (req, res) => {
+    // Return the products array in JSON format
+    res.status(200).json(products);
+});
 
-def help():
-    print('python classify.py <path_to_model.eim>')
+app.get('/product/:id', (req, res) => {
+    const id = req.params.id;
 
-def post(label, price, final_rate, taken):
-    global id_product
-    url = "http://your-server-url.com/product"  # Update with your actual server URL
-    headers = CaseInsensitiveDict()
-    headers["Content-Type"] = "application/json"
-    data_dict = {
-        "id": id_product,
-        "name": label,
-        "price": price,
-        "units": "units",
-        "taken": taken,
-        "payable": final_rate
+    // Find the product by ID
+    const product = products.find(p => p.id === id);
+    
+    if (product) {
+        res.status(200).json(product);
+    } else {
+        res.status(404).send('Product not found');
     }
-    data = json.dumps(data_dict)
+});
 
-    try:
-        resp = requests.post(url, headers=headers, data=data)
-        if resp.status_code == 200:
-            print(f"Product {label} added successfully.")
-        else:
-            print(f"Failed to add product: {resp.status_code} - {resp.text}")
-    except requests.exceptions.RequestException as e:
-        print(f"Error sending data: {e}")
+app.delete('/product/:id', (req, res) => {
+    const id = req.params.id;
 
-    id_product += 1
-    list_label.clear()
+    // Remove product from the products array
+    products = products.filter(i => i.id !== id);
 
-def rate(label, taken):
-    print("Calculating rate")
-    if label == a:
-        price = 10
-        final_rate = 10
-    elif label == b:
-        price = 20
-        final_rate = 20
-    elif label == l:
-        price = 1
-        final_rate = 1
-    else:
-        price = 2
-        final_rate = 2
+    res.status(200).send('Product is deleted');
+});
 
-    post(label, price, final_rate, taken)
+app.post('/product/:id', (req, res) => {
+    const id = req.params.id;
+    const updatedProduct = req.body;
 
-def list_com(label):
-    global count
-    global taken
-    list_label.append(label)
-    count += 1
-    print('count is', count)
-    time.sleep(1)
-    if count > 1:
-        if list_label[-1] != list_label[-2]:
-            print("New Item detected")
-            print("Label is", list_label[-1])
-            rate(list_label[-2], taken)
+    // Find and update the product
+    let updated = false;
+    products = products.map(product => {
+        if (product.id === id) {
+            updated = true;
+            return updatedProduct;
+        }
+        return product;
+    });
 
-def main(argv):
-    try:
-        opts, args = getopt.getopt(argv, "h", ["--help"])
-    except getopt.GetoptError:
-        help()
-        sys.exit(2)
+    if (updated) {
+        res.status(200).send('Product is updated');
+    } else {
+        res.status(404).send('Product not found');
+    }
+});
 
-    for opt, arg in opts:
-        if opt in ('-h', '--help'):
-            help()
-            sys.exit()
+app.post('/checkout', (req, res) => {
+    const order = req.body;
 
-    if len(args) == 0:
-        help()
-        sys.exit(2)
+    // Log the order for debugging
+    console.log('Received order:', order);
 
-    model = args[0]
-    dir_path = os.path.dirname(os.path.realpath(__file__))
-    modelfile = os.path.join(dir_path, model)
+    orders.push(order);
 
-    print('MODEL: ' + modelfile)
+    // Redirecting after checkout
+    res.redirect(302, 'https://assettracker.cf');
+});
 
-    picam2 = initialize_camera()
+app.get('/checkout', (req, res) => {
+    res.status(200).json(orders);
+});
 
-    with ImageImpulseRunner(modelfile) as runner:
-        try:
-            model_info = runner.init()
-            print('Loaded runner for "' + model_info['project']['owner'] + ' / ' + model_info['project']['name'] + '"')
-            labels = model_info['model_parameters']['labels']
-
-            next_frame = 0
-
-            while True:
-                if next_frame > now():
-                    time.sleep((next_frame - now()) / 1000)
-
-                frame = capture_frame(picam2)
-
-                if frame is None:
-                    print("No frame captured, skipping this iteration.")
-                    continue
-
-                try:
-                    features, cropped = runner.get_features_from_image(frame)
-                    print("Features extracted successfully.")
-                    res = runner.classify(features)
-                    print("Classification result:", res)
-
-                    if "classification" in res["result"].keys():
-                        print('Result (%d ms.) ' % (res['timing']['dsp'] + res['timing']['classification']), end='')
-                        for label in labels:
-                            score = res['result']['classification'][label]
-                            if score > 0.9:
-                                list_com(label)
-                                print(f'{label} detected')
-                        print('', flush=True)
-                    next_frame = now() + 100
-                except Exception as e:
-                    print(f"Error during inference: {e}")
-                    break
-        finally:
-            if runner:
-                runner.stop()
-
-if __name__ == "__main__":
-    main(sys.argv[1:])
+app.listen(port, () => console.log(`Server listening on port ${port}!`));
