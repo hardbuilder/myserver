@@ -44,16 +44,13 @@ app.get('/product/:id', (req, res) => {
 });
 
 // DELETE route for deleting a product by ID
-// Example for Express.js server
-app.delete('/delete-all-products', (req, res) => {
-    // Assuming you are using a database like MongoDB or SQL
-    Product.deleteMany({}, (err) => {
-        if (err) {
-            res.status(500).json({ success: false, message: 'Error deleting products' });
-        } else {
-            res.status(200).json({ success: true, message: 'All products deleted successfully' });
-        }
-    });
+app.delete('/product/:id', (req, res) => {
+    const id = req.params.id;
+
+    // Remove the product from the array
+    products = products.filter(i => i.id !== id);
+
+    res.send('Product is deleted');
 });
 
 app.post('/product/:id', (req, res) => {
