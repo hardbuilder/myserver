@@ -1,119 +1,98 @@
-var InitialCount = -1;
+const express = require('express')
+const bodyParser = require('body-parser');
+const cors = require('cors');
 
+const app = express()
+var port = process.env.PORT || 3000;
 
+let products = [];
+let orders = [];
+app.use(cors());
 
-const deleteProducts = async() => {
-    url = 'https://chekoutbyipr39.onrender.com//product';
+app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.json());
 
-    let res = await axios.get(url);
-    responseText = res.data;
-    const products = responseText;
+app.get('/', (req, res) => {
+    res.send("API deployment successful");
+});
 
+app.post('/product', (req, res) => {
+    const product = req.body;
+
+    // output the product to the console for debugging
+    console.log(product);
+    products.push(product);
+
+    res.send('Product is added to the database');
+});
+
+app.get('/product', (req, res) => {
+    res.json(products);
+});
+
+app.get('/product/:id', (req, res) => {
+    // reading id from the URL
+    const id = req.params.id;
+
+    // searching products for the id
     for (let product of products) {
-        const response = await axios.delete(`https://chekoutbyipr39.onrender.com//product/${product.id}`)
-
+        if (product.id === id) {
+            res.json(product);
+            return;
+        }
     }
-    location.reload();
-    window.scroll({
-        top: 0,
-        left: 0,
-        behavior: 'smooth'
-    });
-}
 
-const loadProducts = async() => {
-    url = 'https://chekoutbyipr39.onrender.com/product';
+    // sending 404 when not found something is a good practice
+    res.status(404).send('Product not found');
+});
 
-    let res = await axios.get(url);
-    responseText = await res.data;
-    const products = responseText;
-    var len = products.length;
+app.delete('/product/:id', (req, res) => {
+    // reading id from the URL
+    const id = req.params.id;
 
-    if (len > InitialCount + 1) {
-        $("#1").css("display", "none");
-        $("#home").css("display", "grid");
-        $("#2").css("display", "grid");
-        var payable = 0;
-        const products = responseText;
-        console.log(products);
-        for (let product of products) {
-            payable = payable + parseFloat(product.payable);
-
+    // remove item from the products array
+    products = products.filter(i => {
+        if (i.id !== id) {
+            return true;
         }
 
-        var product = products.pop();
-        const x = `
-        <section>
-                <div class="card card-long animated fadeInUp once">
-                    <img src="asset/img/${product.id}.jpg" class="album">
-                    <div class="span1">Product Name</div>
-                    <div class="card__product">
-                        <span>${product.name}</span>
-                    </div>
-                    <div class="span2">Per Unit</div>
-                    <div class="card__price">
-                        <span>${product.price} </span>
-                    </div>
-                    <div class="span3">Units</div>
-                    <div class="card__unit">
-                        <span>${product.taken} ${product.unit}</span>
-                    </div>
+        return false;
+    });
 
-                    <div class="span4">Payable</div>
-                    <div class="card__amount">
-                        <span>${product.payable}</span>
-                    </div>
-                </div>
-            </section>
-        <section>
-        `
+    // sending 404 when not found something is a good practice
+    res.send('Product is deleted');
+});
 
-        document.getElementById('home').innerHTML = document.getElementById('home').innerHTML + x;
-        document.getElementById('2').innerHTML = "CHECKOUT $" + payable;
-        InitialCount += 1;
+app.post('/product/:id', (req, res) => {
+    // reading id from the URL
+    const id = req.params.id;
+    const newProduct = req.body;
+
+    // remove item from the products array
+    for (let i = 0; i < products.length; i++) {
+        let product = products[i]
+
+        if (product.id === id) {
+            products[i] = newProduct;
+        }
     }
 
+    // sending 404 when not found something is a good practice
+    res.send('Product is edited');
+});
 
-}
+app.post('/checkout', (req, res) => {
+    const order = req.body;
 
-var checkout = async() => {
-    document.getElementById('2').innerHTML = "<span class='loader-16' style='margin-left: 44%;'></span>"
-    var payable = 0;
-    url = 'https://chekoutbyipr39.onrender.com/product';
+    // output the product to the console for debugging
+    orders.push(order);
 
-    let res = await axios.get(url);
-    responseText = await res.data;
-    products = responseText;
+    res.redirect(302, 'https://assettracker.cf');
+});
 
-    for (let product of products) {
-        payable = payable + parseFloat(product.payable);
-    }
+app.get('/checkout', (req, res) => {
+    res.json(orders);
 
-    var url = "https://api.scanova.io/v2/qrcode/text?data=upi%3A%2F%2Fpay%3Fpa%3Dshebinjosejacob2014%40oksbi%26pn%3DTXN965654954321%26tn%3DA%26am%3D4%26cu%3DINR%26url%3Dhttps%3A%2F%2Fcoderscafe.cf%2F&size=l&error_correction=M&data_pattern=RECT&eye_pattern=TLBR_LEAF&data_gradient_style=Radial&data_gradient_start_color=%2302c8db&data_gradient_end_color=%2302c8db&eye_color_inner=%2302c8db&eye_color_outer=%2302c8db&background_color=%23ecf0f3&logo.size=15&logo.excavated=true&logo.angle=0&poster.left=50&poster.top=50&poster.size=40&poster.eyeshape=ROUND_RECT&poster.dataPattern=ROUND&format=png&apikey=fmdtvmmwccekndkpalsltpzhvfmnpsmuhrvhpxzf";
+});
 
-    await fetch(url)
-        .then(function(data) {
-            return data.blob();
-        })
-        .then(function(img) {
-            var image = URL.createObjectURL(img);
-            $("#home").css("display", "none");
-            $("#final").css("display", "none");
-            window.scroll({
-                top: 0,
-                left: 0,
-                behavior: 'smooth'
-            });
-            $('#image').attr('src', image);
-            $("#qr").css("display", "grid");
-
-        });
-    setTimeout(function(){
-        $("#qr").css("display", "none");
-        $("#success").css("display", "grid");
-            },10000);
-        
-
-   \
-    deleteProducts();
-}
+app.listen(port, () => console.log(`Server listening on port ${port}!`));
