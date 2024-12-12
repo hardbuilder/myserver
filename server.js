@@ -1,93 +1,119 @@
-const express = require('express')
-const bodyParser = require('body-parser');
-const cors = require('cors');
+var InitialCount = -1;
 
-const app = express();
-var port = process.env.PORT || 3000;
 
-let products = [];
-let orders = [];
 
-app.use(cors());
-app.use(bodyParser.urlencoded({ extended: false }));
-app.use(bodyParser.json());
+const deleteProducts = async() => {
+    url = 'https://chekoutbyipr39.onrender.com//product';
 
-app.get('/', (req, res) => {
-    res.send("API deployment successful");
-});
+    let res = await axios.get(url);
+    responseText = res.data;
+    const products = responseText;
 
-// POST /product - Add product
-app.post('/product', (req, res) => {
-    const product = req.body;
-
-    // Output the product to the console for debugging
-    console.log('Adding new product:', product);
-
-    products.push(product);
-
-    res.send('Product is added to the database');
-});
-
-// GET /product - Get all products
-app.get('/product', (req, res) => {
-    res.json(products);
-});
-
-// GET /product/:id - Get product by ID
-app.get('/product/:id', (req, res) => {
-    const id = req.params.id;
-
-    // Searching for the product by ID
     for (let product of products) {
-        if (product.id === id) {
-            res.json(product);
-            return;
+        const response = await axios.delete(`https://chekoutbyipr39.onrender.com//product/${product.id}`)
+
+    }
+    location.reload();
+    window.scroll({
+        top: 0,
+        left: 0,
+        behavior: 'smooth'
+    });
+}
+
+const loadProducts = async() => {
+    url = 'https://chekoutbyipr39.onrender.com/product';
+
+    let res = await axios.get(url);
+    responseText = await res.data;
+    const products = responseText;
+    var len = products.length;
+
+    if (len > InitialCount + 1) {
+        $("#1").css("display", "none");
+        $("#home").css("display", "grid");
+        $("#2").css("display", "grid");
+        var payable = 0;
+        const products = responseText;
+        console.log(products);
+        for (let product of products) {
+            payable = payable + parseFloat(product.payable);
+
         }
+
+        var product = products.pop();
+        const x = `
+        <section>
+                <div class="card card-long animated fadeInUp once">
+                    <img src="asset/img/${product.id}.jpg" class="album">
+                    <div class="span1">Product Name</div>
+                    <div class="card__product">
+                        <span>${product.name}</span>
+                    </div>
+                    <div class="span2">Per Unit</div>
+                    <div class="card__price">
+                        <span>${product.price} </span>
+                    </div>
+                    <div class="span3">Units</div>
+                    <div class="card__unit">
+                        <span>${product.taken} ${product.unit}</span>
+                    </div>
+
+                    <div class="span4">Payable</div>
+                    <div class="card__amount">
+                        <span>${product.payable}</span>
+                    </div>
+                </div>
+            </section>
+        <section>
+        `
+
+        document.getElementById('home').innerHTML = document.getElementById('home').innerHTML + x;
+        document.getElementById('2').innerHTML = "CHECKOUT $" + payable;
+        InitialCount += 1;
     }
 
-    res.status(404).send('Product not found');
-});
 
-// DELETE /product/:id - Delete product by ID
-app.delete('/product/:id', (req, res) => {
-    const id = req.params.id;
+}
 
-    console.log(`Attempting to delete product with ID: ${id}`);
-    console.log("Current products:", products);
+var checkout = async() => {
+    document.getElementById('2').innerHTML = "<span class='loader-16' style='margin-left: 44%;'></span>"
+    var payable = 0;
+    url = 'https://chekoutbyipr39.onrender.com/product';
 
-    // Find the product by ID
-    const productIndex = products.findIndex(i => i.id === id);
+    let res = await axios.get(url);
+    responseText = await res.data;
+    products = responseText;
 
-    if (productIndex !== -1) {
-        // If the product is found, remove it from the array
-        products.splice(productIndex, 1);
-        console.log(`Product with ID: ${id} has been deleted.`);
-        res.status(200).send('Product is deleted');
-    } else {
-        // If the product is not found, send a 404 response
-        console.log(`Product with ID: ${id} not found.`);
-        res.status(404).send('Product not found');
+    for (let product of products) {
+        payable = payable + parseFloat(product.payable);
     }
-});
 
-// POST /checkout - Create a new order
-app.post('/checkout', (req, res) => {
-    const order = req.body;
+    var url = "https://chekoutbyipr39.onrender.com/product";
 
-    // Output the order to the console for debugging
-    console.log('New order:', order);
+    await fetch(url)
+        .then(function(data) {
+            return data.blob();
+        })
+        .then(function(img) {
+            var image = URL.createObjectURL(img);
+            $("#home").css("display", "none");
+            $("#final").css("display", "none");
+            window.scroll({
+                top: 0,
+                left: 0,
+                behavior: 'smooth'
+            });
+            $('#image').attr('src', image);
+            $("#qr").css("display", "grid");
 
-    orders.push(order);
+        });
+    setTimeout(function(){
+        $("#qr").css("display", "none");
+        $("#success").css("display", "grid");
+            },10000);
+        
 
-    res.redirect(302, 'https://assettracker.cf');
-});
-
-// GET /checkout - Get all orders
-app.get('/checkout', (req, res) => {
-    res.json(orders);
-});
-
-// Start the server
-app.listen(port, () => console.log(`Server listening on port ${port}!`));
-
-deleteproducts();
+    // window.location.href = "upi://pay?pa=shebinjosejacob2014@oksbi&pn=TXN9656549238&tn=A&am=1&cu=INR&url=https://assettracker.cf/"*/
+    deleteProducts();
+}
