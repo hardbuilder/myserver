@@ -1,8 +1,8 @@
-const express = require('express')
+const express = require('express');
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
-const app = express()
+const app = express();
 var port = process.env.PORT || 3000;
 
 let products = [];
@@ -16,83 +16,91 @@ app.get('/', (req, res) => {
     res.send("API deployment successful");
 });
 
+// Add new product
 app.post('/product', (req, res) => {
     const product = req.body;
 
-    // output the product to the console for debugging
+    // Output the product to the console for debugging
     console.log(product);
+
+    // Add the new product to the products array
     products.push(product);
 
     res.send('Product is added to the database');
 });
 
+// Get all products
 app.get('/product', (req, res) => {
     res.json(products);
 });
 
+// Get product by ID
 app.get('/product/:id', (req, res) => {
-    // reading id from the URL
     const id = req.params.id;
 
-    // searching products for the id
-    for (let product of products) {
-        if (product.id === id) {
-            res.json(product);
-            return;
-        }
+    // Search for the product by ID
+    const product = products.find(p => p.id === id);
+
+    if (product) {
+        res.json(product);
+    } else {
+        res.status(404).send('Product not found');
     }
-
-    // sending 404 when not found something is a good practice
-    res.status(404).send('Product not found');
 });
 
+// Delete product by ID
 app.delete('/product/:id', (req, res) => {
-    // reading id from the URL
     const id = req.params.id;
 
-    // remove item from the products array
-    products = products.filter(i => {
-        if (i.id !== id) {
-            return true;
-        }
+    // Remove product from the products array
+    const initialLength = products.length;
+    products = products.filter(product => product.id !== id);
 
-        return false;
-    });
-
-    // sending 404 when not found something is a good practice
-    res.send('Product is deleted');
+    if (products.length === initialLength) {
+        res.status(404).send('Product not found');
+    } else {
+        res.send('Product is deleted');
+    }
 });
 
+// Edit product by ID
 app.post('/product/:id', (req, res) => {
-    // reading id from the URL
     const id = req.params.id;
     const newProduct = req.body;
 
-    // remove item from the products array
+    // Find the product and update it
+    let productUpdated = false;
     for (let i = 0; i < products.length; i++) {
-        let product = products[i]
-
-        if (product.id === id) {
+        if (products[i].id === id) {
             products[i] = newProduct;
+            productUpdated = true;
+            break;
         }
     }
 
-    // sending 404 when not found something is a good practice
-    res.send('Product is edited');
+    if (productUpdated) {
+        res.send('Product is edited');
+    } else {
+        res.status(404).send('Product not found');
+    }
 });
 
+// Checkout a product (save to orders)
 app.post('/checkout', (req, res) => {
     const order = req.body;
 
-    // output the product to the console for debugging
+    // Output the order to the console for debugging
     orders.push(order);
 
+    // Redirect to another page after checkout
     res.redirect(302, 'https://assettracker.cf');
 });
 
+// Get all checkout orders
 app.get('/checkout', (req, res) => {
     res.json(orders);
-
 });
 
-app.listen(port, () => console.log(`Server listening on port ${port}!`));
+app.listen(port, () => {
+    console.log(`Server listening on port ${port}!`);
+});
