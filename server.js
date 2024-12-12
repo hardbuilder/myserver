@@ -1,4 +1,4 @@
-const express = require('express');
+const express = require('express')
 const bodyParser = require('body-parser');
 const cors = require('cors');
 
@@ -7,8 +7,8 @@ var port = process.env.PORT || 3000;
 
 let products = [];
 let orders = [];
-app.use(cors());
 
+app.use(cors());
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
@@ -16,80 +16,76 @@ app.get('/', (req, res) => {
     res.send("API deployment successful");
 });
 
+// POST /product - Add product
 app.post('/product', (req, res) => {
     const product = req.body;
 
-    // Log the received product for debugging
-    console.log('Received product:', product);
-    
-    // Add the product to the products array
+    // Output the product to the console for debugging
+    console.log('Adding new product:', product);
+
     products.push(product);
 
-    res.status(200).send('Product is added to the database');
+    res.send('Product is added to the database');
 });
 
+// GET /product - Get all products
 app.get('/product', (req, res) => {
-    // Return the products array in JSON format
-    res.status(200).json(products);
+    res.json(products);
 });
 
+// GET /product/:id - Get product by ID
 app.get('/product/:id', (req, res) => {
     const id = req.params.id;
 
-    // Find the product by ID
-    const product = products.find(p => p.id === id);
-    
-    if (product) {
-        res.status(200).json(product);
-    } else {
-        res.status(404).send('Product not found');
+    // Searching for the product by ID
+    for (let product of products) {
+        if (product.id === id) {
+            res.json(product);
+            return;
+        }
     }
+
+    res.status(404).send('Product not found');
 });
 
+// DELETE /product/:id - Delete product by ID
 app.delete('/product/:id', (req, res) => {
     const id = req.params.id;
 
-    // Remove product from the products array
-    products = products.filter(i => i.id !== id);
+    console.log(`Attempting to delete product with ID: ${id}`);
+    console.log("Current products:", products);
 
-    res.status(200).send('Product is deleted');
-});
+    // Find the product by ID
+    const productIndex = products.findIndex(i => i.id === id);
 
-app.post('/product/:id', (req, res) => {
-    const id = req.params.id;
-    const updatedProduct = req.body;
-
-    // Find and update the product
-    let updated = false;
-    products = products.map(product => {
-        if (product.id === id) {
-            updated = true;
-            return updatedProduct;
-        }
-        return product;
-    });
-
-    if (updated) {
-        res.status(200).send('Product is updated');
+    if (productIndex !== -1) {
+        // If the product is found, remove it from the array
+        products.splice(productIndex, 1);
+        console.log(`Product with ID: ${id} has been deleted.`);
+        res.status(200).send('Product is deleted');
     } else {
+        // If the product is not found, send a 404 response
+        console.log(`Product with ID: ${id} not found.`);
         res.status(404).send('Product not found');
     }
 });
 
+// POST /checkout - Create a new order
 app.post('/checkout', (req, res) => {
     const order = req.body;
 
-    // Log the order for debugging
-    console.log('Received order:', order);
+    // Output the order to the console for debugging
+    console.log('New order:', order);
 
     orders.push(order);
 
-    // Redirecting after checkout
     res.redirect(302, 'https://assettracker.cf');
 });
 
+// GET /checkout - Get all orders
 app.get('/checkout', (req, res) => {
-    res.status(200).json(orders);
+    res.json(orders);
 });
 
+// Start the server
 app.listen(port, () => console.log(`Server listening on port ${port}!`));
